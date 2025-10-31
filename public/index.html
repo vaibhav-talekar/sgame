@@ -1,48 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Click Game</title>
+  <title>Azure Node Task Manager</title>
   <style>
-    body { font-family: sans-serif; text-align: center; margin-top: 50px; }
-    button { font-size: 20px; padding: 10px 20px; cursor: pointer; }
-    h1 { color: #0078d4; }
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    input { padding: 8px; width: 200px; }
+    button { padding: 8px 12px; margin-left: 8px; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 6px 0; }
   </style>
 </head>
 <body>
-  <h1>Click the Button Game 🎮</h1>
-  <p>Click as many times as you can in 10 seconds!</p>
-  <button id="btn">Start Game</button>
-  <h2 id="score"></h2>
+  <h1>📝 Azure Node Task Manager</h1>
+  <input type="text" id="taskTitle" placeholder="Enter new task">
+  <button onclick="addTask()">Add Task</button>
+
+  <ul id="taskList"></ul>
 
   <script>
-    const btn = document.getElementById("btn");
-    const scoreDisplay = document.getElementById("score");
-    let score = 0, playing = false;
+    async function loadTasks() {
+      const res = await fetch('/tasks');
+      const tasks = await res.json();
+      const list = document.getElementById('taskList');
+      list.innerHTML = tasks.map(t =>
+        `<li>${t.title} ${t.done ? '✅' : `<button onclick="markDone(${t.id})">Mark Done</button>`}</li>`
+      ).join('');
+    }
 
-    btn.addEventListener("click", () => {
-      if (!playing) {
-        playing = true;
-        score = 0;
-        btn.textContent = "Click!";
-        scoreDisplay.textContent = "Time: 10s | Score: 0";
-        let time = 10;
+    async function addTask() {
+      const title = document.getElementById('taskTitle').value;
+      if (!title) return alert("Enter a task title!");
+      await fetch('/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+      document.getElementById('taskTitle').value = '';
+      loadTasks();
+    }
 
-        const timer = setInterval(() => {
-          time--;
-          scoreDisplay.textContent = `Time: ${time}s | Score: ${score}`;
-          if (time <= 0) {
-            clearInterval(timer);
-            playing = false;
-            btn.textContent = "Play Again";
-            scoreDisplay.textContent = `🎉 Final Score: ${score}`;
-          }
-        }, 1000);
-      } else if (playing) {
-        score++;
-      }
-    });
+    async function markDone(id) {
+      await fetch(`/tasks/${id}/done`, { method: 'POST' });
+      loadTasks();
+    }
+
+    loadTasks();
   </script>
 </body>
 </html>
