@@ -1,34 +1,46 @@
-const http = require("http");
-const fs = require("fs");
+const express = require("express");
 const path = require("path");
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-const port = process.env.PORT || 3000;
-const publicDir = path.join(__dirname, "public");
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
-const server = http.createServer((req, res) => {
-  // Always serve index.html for root URL
-  let filePath = req.url === "/" ? "/index.html" : req.url;
-  const fullPath = path.join(publicDir, filePath);
+// In-memory task list
+let tasks = [
+  { id: 1, title: "Deploy app to Azure", done: false },
+  { id: 2, title: "Complete assignment report", done: false }
+];
 
-  fs.readFile(fullPath, (err, content) => {
-    if (err) {
-      res.writeHead(404, { "Content-Type": "text/plain" });
-      res.end("404 Not Found");
-    } else {
-      // detect type
-      const ext = path.extname(fullPath);
-      const contentType =
-        ext === ".html" ? "text/html" :
-        ext === ".js"   ? "application/javascript" :
-        ext === ".css"  ? "text/css" :
-        "text/plain";
-
-      res.writeHead(200, { "Content-Type": contentType });
-      res.end(content);
-    }
-  });
+// Serve homepage
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "views", "index.html"));
 });
 
-server.listen(port, () => {
-  console.log(`✅ Server running on port ${port}`);
+// Get all tasks (JSON)
+app.get("/tasks", (req, res) => {
+  res.json(tasks);
+});
+
+// Add a new task
+app.post("/tasks", (req, res) => {
+  const { title } = req.body;
+  if (!title) return res.status(400).send("Title required");
+  const newTask = { id: tasks.length + 1, title, done: false };
+  tasks.push(newTask);
+  res.json(newTask);
+});
+
+// Mark a task as done
+app.post("/tasks/:id/done", (req, res) => {
+  const id = parseInt(req.params.id);
+  const task = tasks.find(t => t.id === id);
+  if (!task) return res.status(404).send("Task not found");
+  task.done = true;
+  res.json(task);
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
